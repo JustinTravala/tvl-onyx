@@ -4,4 +4,4 @@ model_list:
     litellm_params:
       custom_llm_provider: gemini
       model: gemini-2.5-flash-lite
-      api_key: "AIzaSyCvVeRKAnhT5hv2ZnmvwA_nD6GDcEdP0Aw"
+      api_key: "xxx"
