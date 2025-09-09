@@ -24,6 +24,7 @@ from onyx.tools.tool_implementations.okta_profile.okta_profile_tool import (
 from onyx.tools.tool_implementations.knowledge_graph.knowledge_graph_tool import (
     KnowledgeGraphTool,
 )
+from onyx.tools.tool_implementations.jira.jira_tool import JiraStructuredTool
 from onyx.tools.tool_implementations.search.search_tool import SearchTool
 from onyx.tools.tool import Tool
 from onyx.utils.logger import setup_logger
@@ -77,6 +78,12 @@ BUILT_IN_TOOLS: list[InCodeToolInfo] = [
     and it requires the Knowledge Graph to be enabled.""",
         in_code_tool_id=KnowledgeGraphTool.__name__,
         display_name=KnowledgeGraphTool._DISPLAY_NAME,
+    ),
+    InCodeToolInfo(
+        cls=JiraStructuredTool,
+        description="The Jira Structured Query Action lets the assistant perform structured Jira queries (counts, latest ticket, JQL).",
+        in_code_tool_id=JiraStructuredTool.__name__,
+        display_name=JiraStructuredTool._DISPLAY_NAME,
     ),
     # Show Okta Profile tool if the environment variables are set
     *(
@@ -137,10 +144,10 @@ def load_builtin_tools(db_session: Session) -> None:
 
 
 def get_builtin_tool(
-    db_session: Session,
-    tool_type: Type[
-        SearchTool | ImageGenerationTool | InternetSearchTool | KnowledgeGraphTool
-    ],
+        db_session: Session,
+        tool_type: Type[
+            SearchTool | ImageGenerationTool | InternetSearchTool | KnowledgeGraphTool
+            ],
 ) -> ToolDBModel:
     """
     Retrieves a built-in tool from the database based on the tool type.
@@ -227,15 +234,15 @@ def refresh_built_in_tools_cache(db_session: Session) -> None:
 
 
 def get_built_in_tool_by_id(
-    in_code_tool_id: str, db_session: Session, force_refresh: bool = False
+        in_code_tool_id: str, db_session: Session, force_refresh: bool = False
 ) -> Type[Tool]:
     global _built_in_tools_cache
 
     # If the tool is not in the cache, refresh it once
     if (
-        _built_in_tools_cache is None
-        or force_refresh
-        or in_code_tool_id not in _built_in_tools_cache
+            _built_in_tools_cache is None
+            or force_refresh
+            or in_code_tool_id not in _built_in_tools_cache
     ):
         refresh_built_in_tools_cache(db_session)
 

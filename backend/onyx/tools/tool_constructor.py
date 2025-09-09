@@ -58,6 +58,7 @@ from onyx.tools.tool_implementations.mcp.mcp_tool import MCPTool
 from onyx.tools.tool_implementations.okta_profile.okta_profile_tool import (
     OktaProfileTool,
 )
+from onyx.tools.tool_implementations.jira.jira_tool import JiraStructuredTool
 from onyx.tools.tool_implementations.search.search_tool import SearchTool
 from onyx.tools.utils import compute_all_tool_tokens
 from onyx.tools.utils import explicit_tool_calling_supported
@@ -324,6 +325,65 @@ def construct_tools(
                 tool_dict[db_tool_model.id] = [
                     KnowledgeGraphTool(tool_id=db_tool_model.id)
                 ]
+
+            # Handle Jira Structured Tool - instantiate for all Jira connectors
+            elif tool_cls.__name__ == JiraStructuredTool.__name__:
+                from sqlalchemy import select
+                from onyx.configs.constants import DocumentSource
+                from onyx.db.models import Connector, ConnectorCredentialPair, Credential
+
+                # Find all JIRA connectors and their credential pairs
+                cc_pairs = (
+                    db_session.execute(
+                        select(ConnectorCredentialPair, Connector, Credential)
+                        .join(Connector, ConnectorCredentialPair.connector_id == Connector.id)
+                        .join(Credential, ConnectorCredentialPair.credential_id == Credential.id)
+                        .where(Connector.source == DocumentSource.JIRA)
+                    )
+                    .all()
+                )
+
+                instances: list[Tool] = []
+                for cc_pair, connector, credential in cc_pairs:
+                    jira_base_url = connector.connector_specific_config.get("jira_base_url") or connector.connector_specific_config.get("server") or connector.connector_specific_config.get("base_url")
+                    if not jira_base_url:
+                        logger.warning(
+                            f"Skipping Jira connector {connector.id} – missing jira_base_url in connector_specific_config"
+                        )
+                        continue
+
+                    creds_dict = credential.credential_json or {}
+                    # minimal required: jira_api_token; if jira_user_email provided -> cloud auth
+                    if not creds_dict.get("jira_api_token"):
+                        logger.warning(
+                            f"Skipping Jira connector {connector.id} – missing jira_api_token in credential"
+                        )
+                        continue
+
+                    try:
+                        # Extract custom field mapping from connector config if available
+                        custom_field_mapping = connector.connector_specific_config.get("custom_field_mapping")
+
+                        instances.append(
+                            cast(
+                                Tool,
+                                JiraStructuredTool(
+                                    jira_base_url=jira_base_url,
+                                    credentials=creds_dict,
+                                    tool_id=db_tool_model.id,
+                                    custom_field_mapping=custom_field_mapping,
+                                ),
+                            )
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"Failed to initialize Jira tool for connector {connector.id}: {e}"
+                        )
+
+                if instances:
+                    tool_dict[db_tool_model.id] = instances
+                else:
+                    logger.warning("No valid Jira connectors found; Jira tool not instantiated")
 
         # Handle custom tools
         elif db_tool_model.openapi_schema:

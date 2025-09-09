@@ -1,0 +1,24 @@
+model_list:
+  # Chat model 1
+  - model_name: lm_studio/gpt-oss-20b                 # tên bạn sẽ gọi ở cổng 4000
+    litellm_params:
+      custom_llm_provider: lm_studio
+      model: openai/gpt-oss-20b            # ID y nguyên từ LM Studio
+      api_base: "http://localhost:1234/v1"
+      api_key: "lm-studio"                  # dummy cho LiteLLM
+
+  # Chat model 2 (code)
+  - model_name: lm_studio/qwen3-coder-30b
+    litellm_params:
+      custom_llm_provider: lm_studio
+      model: qwen/qwen3-coder-30b
+      api_base: "http://localhost:1234/v1"
+      api_key: "lm-studio"
+
+  # Embedding model
+  - model_name: lm_studio/nomic-embed-v1.5
+    litellm_params:
+      custom_llm_provider: lm_studio
+      model: text-embedding-nomic-embed-text-v1.5
+      api_base: "http://localhost:1234/v1"
+      api_key: "lm-studio"
